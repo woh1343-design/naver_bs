@@ -1,4 +1,11 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
 <title>브랜드검색 소재 플래너</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -235,6 +242,7 @@ header.top .sub{color:var(--muted);font-size:12.5px}
 .sv-state{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px}
 .sv-state span:not(.chip){color:var(--muted);font-size:12px}
 .sv-off{font-size:12px;color:var(--muted)}
+.dchip{background:var(--warn-bg);color:var(--warn)}
 .savebar .btn.primary:disabled{opacity:.4;cursor:not-allowed}
 .savebar .btn.primary{padding:9px 18px;font-size:14px}
 .fi{display:flex;gap:12px;align-items:flex-start;margin-top:10px}
@@ -474,7 +482,7 @@ function renderList(){
   ul.innerHTML=rows.map(p=>{const tn=(templates.find(x=>x.id===p.templateId)||{}).name||"";
     if(pendingDel===p._id)return `<li class="delrow"><span>'${esc(p.title||"제목 없음")}' 삭제할까요?</span><div><button type="button" class="btn danger" data-delyes="${p._id}">삭제</button><button type="button" class="btn ghost" data-delno="1">취소</button></div></li>`;
     return `<li class="lrow2"><button type="button" class="del" data-del="${p._id}" aria-label="${esc(p.title||"기획안")} 삭제" title="삭제">×</button><button type="button" data-id="${p._id}" aria-current="${p._id===currentId}"><span class="t">${esc(p.title||"제목 없음")}</span>
-    <span class="m">${p.updatedAt?`저장 ${new Date(p.updatedAt).toLocaleDateString("ko-KR",{month:"numeric",day:"numeric"})} · `:""}${p.start?`${esc(p.start.slice(5))} ~ ${esc((p.end||"").slice(5))}`:"기간 미정"}${tn?` · ${esc(tn)}`:""}</span></button></li>`}).join("");
+    <span class="m">${p.draft?`<span class="chip dchip">임시저장</span>`:""}${p.updatedAt?`저장 ${new Date(p.updatedAt).toLocaleDateString("ko-KR",{month:"numeric",day:"numeric"})} · `:""}${p.start?`${esc(p.start.slice(5))} ~ ${esc((p.end||"").slice(5))}`:"기간 미정"}${tn?` · ${esc(tn)}`:""}</span></button></li>`}).join("");
 }
 
 function opt(list,val){return list.map(([v,l])=>`<option value="${v}"${v===val?" selected":""}>${l}</option>`).join("")}
@@ -572,8 +580,8 @@ function renderEditor(){
 
   <section class="card"><h2>내보내기 <span class="hint">제작 요청·고객사 공유용 텍스트</span></h2>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:${showExport?"10px":"0"}">
-      ${downloads&&window.XLSX?`<button class="btn primary" type="button" id="btnXlsx">엑셀 다운로드</button>`:""}
-      <button class="btn${downloads&&window.XLSX?"":" primary"}" type="button" id="btnCopy">기획안 텍스트 복사</button>
+      ${(downloads||!window.claude)&&window.XLSX?`<button class="btn primary" type="button" id="btnXlsx">엑셀 다운로드</button>`:""}
+      <button class="btn${(downloads||!window.claude)&&window.XLSX?"":" primary"}" type="button" id="btnCopy">기획안 텍스트 복사</button>
       <button class="btn" type="button" id="btnShowExport">${showExport?"미리보기 닫기":"텍스트 미리보기"}</button>
       <div class="spacer"></div>
       ${!isSample&&db?`<button class="btn ghost" type="button" id="btnDup">복제</button>`:""}
@@ -581,11 +589,11 @@ function renderEditor(){
     ${showExport?`<pre class="export" id="exportPre">${esc(exportText(p))}</pre>`:""}
   </section>
   <div class="savebar">
-    <div class="sv-state">${isSample?`<b>저장 전</b>`:`<b>저장됨</b><span>${p.updatedAt?new Date(p.updatedAt).toLocaleString("ko-KR",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"}):""} · 이후 수정은 자동 저장</span>`}
+    <div class="sv-state">${isSample?`<b>저장 전</b>`:`<b>${p.draft?"임시저장됨":"저장됨"}</b><span>${p.updatedAt?new Date(p.updatedAt).toLocaleString("ko-KR",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"}):""} · 이후 수정은 자동 저장</span>`}
       ${nBad?`<span class="chip" style="background:var(--bad-bg);color:var(--bad)">오류 ${nBad}</span>`:""}${nWarn?`<span class="chip" style="background:var(--warn-bg);color:var(--warn)">주의 ${nWarn}</span>`:""}${!nBad&&!nWarn?`<span class="chip s-final">검수 통과</span>`:""}</div>
     <div class="spacer"></div>
     ${!isSample&&db?(confirmDel?`<span class="confirm">이 기획안을 삭제할까요? <button class="btn danger" type="button" id="btnDelYes">삭제</button><button class="btn ghost" type="button" id="btnDelNo">취소</button></span>`:`<button class="btn ghost danger" type="button" id="btnDel">삭제</button>`):""}
-    ${db?`${nBad?`<span class="sv-off">오류를 해결하면 저장할 수 있어요</span>`:""}<button class="btn primary" type="button" id="btnSaveNow"${nBad?" disabled":""}>${isSample?"저장하기":"지금 저장"}</button>`:`<span class="sv-off">저장소에 연결되면 저장할 수 있어요</span>`}
+    ${db?`${nBad?`<span class="sv-off">오류를 해결하면 저장할 수 있어요</span>`:""}<button class="btn" type="button" id="btnDraft">임시저장</button><button class="btn primary" type="button" id="btnSaveNow"${nBad?" disabled":""}>${isSample?"저장하기":"지금 저장"}</button>`:`<span class="sv-off">저장소에 연결되면 저장할 수 있어요</span>`}
   </div>`;
   renderPreview();
 }
@@ -649,6 +657,7 @@ async function exportXlsx(p){
   const wb=XL.utils.book_new();XL.utils.book_append_sheet(wb,ws,"소재");
   const buf=XL.write(wb,{bookType:"xlsx",type:"array"});
   const name=`브랜드검색_${(p.title||"기획안").replace(/[\\/:*?"<>|]/g,"").slice(0,60)}.xlsx`;
+  if(!downloads){XL.writeFile(wb,name);toast("엑셀 파일을 내려받았습니다");return}
   try{await downloads.save({filename:name,data:buf});toast("엑셀 파일을 저장했습니다")}
   catch(e){if(e?.code==="declined")return;toast(e?.code==="rate_limited"?"잠시 후 다시 시도해 주세요":"엑셀 파일을 저장하지 못했습니다")}
 }
@@ -687,7 +696,7 @@ function scheduleSave(){
   setSync("저장 대기…");
   clearTimeout(saveTimer);
   saveTimer=setTimeout(()=>{
-    if(analyze(cur).some(r=>r[0]==="bad")){setSync("오류 있음 · 해결하면 자동 저장");return}
+    if(!cur.draft&&analyze(cur).some(r=>r[0]==="bad")){setSync("오류 있음 · 해결하면 자동 저장");return}
     const id=currentId;cur.updatedAt=Date.now();const body=stripMeta(cur);
     saving=saving.then(()=>db.collection("plans").doc(id).set(body)).then(()=>setSync("저장됨 "+new Date().toTimeString().slice(0,5))).catch(e=>{setSync("저장 실패");toast("저장하지 못했습니다: "+(e?.message||e?.code||"권한 확인"))});
   },700);
@@ -770,9 +779,17 @@ ed.addEventListener("click",async e=>{
   else if(b.dataset.ldel!=null){const i=+b.dataset.ldel,gone=cur.landings[i].id;cur.landings.splice(i,1);for(const k in cur.values)cur.values[k].forEach(it=>{if(it.landing===gone)it.landing=cur.landings[0].id});scheduleSave();renderEditor()}
   else if(b.id==="btnKpi"){cur.kpi=tracking(cur).kpi;scheduleSave();renderEditor()}
   else if(b.id==="btnSaveSample"){await createPlan(cur)}
+  else if(b.id==="btnDraft"){
+    cur.draft=true;
+    if(isSample){b.disabled=true;await createPlan(cur);toast("임시저장했습니다");return}
+    clearTimeout(saveTimer);b.disabled=true;setSync("임시저장 중…");
+    const id=currentId;cur.updatedAt=Date.now();const body=stripMeta(cur);
+    saving=saving.then(()=>db.collection("plans").doc(id).set(body)).then(()=>{setSync("임시저장 "+new Date().toTimeString().slice(0,5));toast("임시저장했습니다");renderEditor();renderList()}).catch(e=>{setSync("저장 실패");b.disabled=false;toast(`저장하지 못했습니다 (${e?.code||e?.message||"알 수 없는 오류"})`)});
+  }
   else if(b.id==="btnSaveNow"){
     const nb=analyze(cur).filter(r=>r[0]==="bad").length;
     if(nb){toast(`검수 체크의 오류 ${nb}건을 먼저 해결해 주세요`);return}
+    cur.draft=false;
     if(isSample){b.disabled=true;await createPlan(cur);if(nb)toast(`저장했습니다 (오류 ${nb}건은 확인이 필요해요)`);return}
     clearTimeout(saveTimer);b.disabled=true;setSync("저장 중…");
     const id=currentId;cur.updatedAt=Date.now();const body=stripMeta(cur);
@@ -861,4 +878,5 @@ renderList();renderEditor();
 })();
 </script>
 
-</body></html>
+</body>
+</html>
