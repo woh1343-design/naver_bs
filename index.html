@@ -161,7 +161,13 @@ header.top .sub{color:var(--muted);font-size:12.5px}
 .pv-sns .chev{color:var(--phone-muted)}
 .grp{border-top:1px solid var(--line);padding-top:14px;margin-top:14px}
 .grp:first-of-type{border-top:0;margin-top:0;padding-top:0}
-.grp-hd{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.grp-hd{display:flex;align-items:center;gap:8px;margin-bottom:8px;width:100%;border:0;background:transparent;padding:4px 0;cursor:pointer;text-align:left;color:inherit}
+.grp-hd:hover b{color:var(--accent)}
+.grp-hd .car{width:12px;font-size:11px;color:var(--muted)}
+.grp-hd .gsum{font-size:12.5px;color:var(--muted);margin-left:4px}
+.grp-hd .gsum em{font-style:normal;color:#e5484d}
+.grp.closed .grp-hd{margin-bottom:0}
+.card h2 .spacer{flex:1}
 .grp-hd b{font-size:14px}
 .grp .seg{margin-bottom:6px}
 .tabblk{margin-top:14px;padding-top:10px;border-top:1px dashed var(--line)}
@@ -354,7 +360,9 @@ const REPEAT=/([!?★☆♥~])\1/;
 
 let downloads=null;
 let db=null, assets=null, plans=[], templates=DEFAULT_TEMPLATES, currentId=null, cur=null, isSample=true;
-const closedTabs=new Set();
+const closedTabs=new Set(),closedGroups=new Set();
+function analyzeGroup(p,t,k){let n=0;for(const f of vis(p,t).filter(f=>f.group===k)){if(f.type==="image"||f.plain)continue;if(f.type==="homelink"&&p.opts.home==="logo"){if(!String((vals(p,f)[0]||{}).url||"").trim())n++;continue}
+  vals(p,f).forEach((it,i)=>{const tx=String(it.text||"").trim();if(!tx||(f.max&&len(tx,t.countMode)>f.max))n++;if(!f.nolink&&!(f.oneLink&&i>0)&&!String(it.url||"").trim())n++})}return n}
 let pendingDel=null;
 async function deletePlan(id){
   if(!db)return;
@@ -526,7 +534,12 @@ function renderEditor(){
       +(t.fields.some(f=>f.countOpt==="tabN")?`<div class="subopt"><span>탭 메뉴 ${p.opts.tabN}개 (최소 2 · 최대 3)</span><button type="button" class="btn ghost" data-tabtogall="1" style="padding:4px 8px;font-size:12px">${closedTabs.size>=+p.opts.tabN?"모두 펼치기":"모두 접기"}</button></div>`:"")
       +(t.fields.some(f=>f.countOpt==="flickN")?cntSeg("flickN",[["4","4개"],["5","5개"]],"섬네일 개수"):"");
     const fs=VF.filter(f=>f.group===g.k);
-    return `<div class="grp"><div class="grp-hd"><b>${g.name}</b><span class="chip ${g.req?"s-review":"s-draft"}">${g.req?"필수":"선택"}</span></div>
+    const gcl=closedGroups.has(g.k);
+    const selL=g.k==="sub"?(isDyn?"다이나믹 섬네일 · "+t.name:"버튼"):((opts.find(o=>o[0]===val)||[])[1]||"");
+    const gErr=analyzeGroup(p,t,g.k);
+    const hd=`<button type="button" class="grp-hd" data-grptog="${g.k}" aria-expanded="${!gcl}"><span class="car">${gcl?"▸":"▾"}</span><b>${g.name}</b><span class="chip ${g.req?"s-review":"s-draft"}">${g.req?"필수":"선택"}</span>${gcl?`<span class="gsum">${esc(selL)}${gErr?` · <em>오류 ${gErr}</em>`:""}</span>`:""}</button>`;
+    if(gcl)return `<div class="grp closed">${hd}</div>`;
+    return `<div class="grp">${hd}
       <div class="seg" role="radiogroup" aria-label="${g.name} 옵션">${opts.map(([v,l])=>`<button type="button" role="radio" aria-checked="${g.k==="sub"?(v===val||(isDyn&&l==="다이나믹 섬네일")):v===val}" data-${g.k==="sub"?"tplsel":"opt"}="${g.k==="sub"?v:g.k+":"+v}">${esc(l)}</button>`).join("")}</div>
       ${subExtra}
       ${fs.map(fieldHtml).join("")}</div>`;
@@ -546,7 +559,7 @@ function renderEditor(){
     </div>
   </section>
 
-  <section class="card"><h2>영역별 카피 <span class="hint">MO 라이트형 · ${t.countMode==="byte"?"바이트(한글 2)":"글자"} 기준</span></h2>
+  <section class="card"><h2>영역별 카피 <span class="hint">MO 라이트형 · ${t.countMode==="byte"?"바이트(한글 2)":"글자"} 기준</span><span class="spacer"></span><button type="button" class="btn ghost" data-grpall="1" style="padding:3px 8px;font-size:12px;font-weight:500">${closedGroups.size>=GROUPS.length?"모두 펼치기":"모두 접기"}</button></h2>
     ${fieldsHtml}</section>
 
   <section class="card"><h2>검수 체크</h2>
@@ -746,6 +759,8 @@ ed.addEventListener("change",async e=>{
 ed.addEventListener("click",async e=>{
   const b=e.target.closest("button");if(!b)return;
   if(b.dataset.tabtog!=null){const k=+b.dataset.tabtog;closedTabs.has(k)?closedTabs.delete(k):closedTabs.add(k);renderEditor();return}
+  if(b.dataset.grptog){const k=b.dataset.grptog;closedGroups.has(k)?closedGroups.delete(k):closedGroups.add(k);renderEditor();return}
+  if(b.dataset.grpall){if(closedGroups.size>=GROUPS.length)closedGroups.clear();else GROUPS.forEach(g=>closedGroups.add(g.k));renderEditor();return}
   if(b.dataset.tabdel){cur.opts.tabN="2";if(cur.values.ext_tab&&cur.values.ext_tab[2])cur.values.ext_tab[2]={text:"",url:""};if(cur.values.ext)for(let i=6;i<9;i++)if(cur.values.ext[i])cur.values.ext[i]={text:"",url:""};closedTabs.delete(2);scheduleSave();renderEditor();toast("탭 메뉴 3을 삭제했습니다");return}
   if(b.dataset.tabadd){cur.opts.tabN="3";closedTabs.delete(2);scheduleSave();renderEditor();return}
   if(b.dataset.tabtogall){const n=+cur.opts.tabN;if(closedTabs.size>=n)closedTabs.clear();else for(let k=0;k<n;k++)closedTabs.add(k);renderEditor();return}
