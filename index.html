@@ -238,6 +238,7 @@ header.top .sub{color:var(--muted);font-size:12.5px}
 .trow.over input,.trow.over textarea{border-color:var(--bad)}
 .lk2{display:grid;grid-template-columns:110px minmax(0,1fr);gap:6px}
 .lk2 input{font-family:var(--f-mono);font-size:12.5px}
+.fhint{font-size:12px;color:var(--muted)}
 .ferr{font-size:12px;color:#e5484d;line-height:1.3}
 .fi.withimg .ithumb{flex:none;margin-top:22px}
 .finfo{background:#e8f4fd;color:#2c3e50;border-radius:4px;padding:9px 12px;font-size:12.5px}
@@ -313,7 +314,7 @@ const NEWS_LABEL={news:"새소식",live:"쇼핑라이브",clip:"숏클립"};
 const COND_TXT={"news!=none":"브랜드소식 사용 시","main=basic":"메인 콘텐츠 베이직 선택 시","main=listing":"메인 콘텐츠 리스팅 선택 시","sns!=none":"SNS소식 사용 시","legal!=none":"법적고지문 사용 시"};
 const NEWS_HEADS=["새소식","핫딜","할인","이벤트","기획전"];
 const BASE=[
-  {id:"home",group:"home",label:"홈링크 문구",type:"homelink",max:20,count:1,note:""},
+  {id:"home",group:"home",label:"홈링크 문구",type:"homelink",max:7,count:1,note:"",textLabel:"브랜드명",fixedMax:7},
   {id:"news",group:"news",label:"브랜드소식 문구",type:"news",max:30,count:1,note:"",cond:"news!=none"},
   {id:"img",group:"main",label:"메인 이미지",type:"image",max:0,count:1,note:"1:1",cond:"main=basic"},
   {id:"mt_brand",group:"main",label:"서브타이틀",type:"mtbrand",max:15,count:1,note:"",cond:"main=basic"},
@@ -333,7 +334,7 @@ const DEFAULT_TEMPLATES=[
  {id:"light-flick",name:"플리킹",dyn:true,countMode:"char",fields:[...BASE,{id:"ext",group:"sub",label:"플리킹 섬네일",type:"flick",max:7,count:5,note:DT,countOpt:"flickN"},...TAIL]}
 ];
 function condOK(f,o){if(!f.cond)return true;const m=f.cond.match(/^(\w+)(!=|=)(\w+)$/);if(!m)return true;const v=(o||{})[m[1]]??DEF_OPTS[m[1]];return m[2]==="="?v===m[3]:v!==m[3]}
-function eff(f,o){if(!f.countOpt)return f;const n=+((o||{})[f.countOpt]||DEF_OPTS[f.countOpt]);return {...f,count:n*(f.countMul||1),max:(f.maxBy&&f.maxBy[n])||f.max}}
+function eff(f,o){if(f.fixedMax)f={...f,max:f.fixedMax};if(!f.countOpt)return f;const n=+((o||{})[f.countOpt]||DEF_OPTS[f.countOpt]);return {...f,count:n*(f.countMul||1),max:(f.maxBy&&f.maxBy[n])||f.max}}
 function vis(p,t){return t.fields.filter(f=>condOK(f,p.opts)).map(f=>eff(f,p.opts))}
 function vals(p,f){return (p.values[f.id]||[]).slice(0,f.count)}
 const MANUAL=[
@@ -468,7 +469,7 @@ function renderEditor(){
     return `<div class="fl">링크</div><div class="lk2"><select data-proto="${f.id}" data-i="${i}" aria-label="프로토콜">${opt([["https://","https://"],["http://","http://"]],proto)}</select><input data-u="${f.id}" data-i="${i}" value="${esc(rest)}" placeholder="주소 입력" aria-label="${esc(f.label)} ${i+1} 링크"></div>${ferr(!rest?"필수 항목입니다.":!/^[^\/\s]+\.[^\s]+/.test(rest)?"URL 형식을 확인하세요.":"")}`};
   const textRow=(f,i,it,multi,lab)=>{const n=len(it.text,t.countMode),ov=f.max&&n>f.max,near=f.max&&!ov&&n>=f.max*0.9,ph=f.max?`1~${f.max}${t.countMode==="byte"?"byte":"자"} 내 입력 가능`:"";
     const ctl=multi?`<textarea data-v="${f.id}" data-i="${i}" aria-label="${esc(lab)}" rows="2" placeholder="${ph}">${esc(it.text)}</textarea>`:`<input data-v="${f.id}" data-i="${i}" value="${esc(it.text)}" aria-label="${esc(lab)}" placeholder="${ph}">`;
-    return `<div class="fl">텍스트</div><div class="trow${ov?" over":""}">${ctl}<span class="cnt${ov?" over":near?" near":""}" data-c="${f.id}-${i}">${n}/${f.max||"–"}</span></div>${ferr(!String(it.text||"").trim()?"1자 이상 입력하세요.":ov?`최대 ${f.max}자까지 입력 가능합니다.`:"")}`};
+    return `<div class="fl">${f.textLabel||"텍스트"}</div><div class="trow${ov?" over":""}">${ctl}<span class="cnt${ov?" over":near?" near":""}" data-c="${f.id}-${i}">${n}/${f.max||"–"}</span></div>${ferr(!String(it.text||"").trim()?"1자 이상 입력하세요.":ov?`최대 ${f.max}자까지 입력 가능합니다.`:"")}`};
   const VF=vis(p,t);
   const IMGT=["thumbs","flick"];
   const tabF=VF.find(x=>x.type==="tabs");
@@ -494,7 +495,8 @@ function renderEditor(){
       if(f.perTab&&closedTabs.has(Math.floor(i/3)))return tabHd;
       const thumb=wi?`<label class="ithumb${it.img?.url?" has":""}" title="이미지 업로드" style="${it.img?.url?`background-image:url('${esc(it.img.url)}')`:""}">${it.img?.url?"":"+ 이미지"}<input type="file" data-img="${f.id}" data-i="${i}" accept="image/png,image/jpeg" hidden></label>`:"";
       const sub=f.oneLink?`${i+1})`:f.perTab?`섬네일 ${i%3+1}`:f.count>1?`${f.label} ${i+1}`:"";
-      const link=f.nolink||(f.oneLink&&i<f.count-1)?"":(f.oneLink?urlRow(f,0,vals(p,f)[0]):urlRow(f,i,it));
+      let link=f.nolink||(f.oneLink&&i<f.count-1)?"":(f.oneLink?urlRow(f,0,vals(p,f)[0]):urlRow(f,i,it));
+      if(f.type==="homelink"&&p.opts.home==="text")link=`<div class="fl">슬로건</div><input data-slogan="${f.id}" value="${esc(it.slogan||"")}" placeholder="홈페이지" aria-label="슬로건"><div class="fhint">슬로건 미입력 시 '홈페이지'로 입력됩니다.</div>`+link;
       return `${tabHd}<div class="fi${wi?" withimg":""}${f.perTab?" intab":""}">${thumb}<div class="fbody">${i===0?newsHead:""}${sub?`<div class="fsub">${esc(sub)}</div>`:""}${textRow(f,i,it,multi,sub||f.label)}${link}</div></div>`}).join("");
     return `<div class="copy-field"><div class="hd"><b>${esc(f.label)}</b><span class="spec">최대 ${f.max}${t.countMode==="byte"?"byte":"자"}${f.count>1?` × ${f.count}개`:""}${f.note?" · "+esc(f.note):""}</span></div>${items}</div>`;
   };
@@ -566,10 +568,10 @@ function renderPreview(){
   const one=ty=>{const f=by(ty)[0];return f?cell(f,v(f)[0]):""};
   const has=ty=>{const f=by(ty)[0];return f&&String(v(f)[0]?.text||"").trim()};
   const bnF=by("mtbrand")[0]||by("title")[0];
-  const hF=by("homelink")[0],hq=hF?String(v(hF)[0]?.text||"").replace(/\s*(공식\s*)?(홈페이지|스토어|몰)$/,""):"";
+  const hF=by("homelink")[0],hq=hF?String(v(hF)[0]?.text||"").trim():"";
   $("#pvQuery").textContent=hq||(bnF&&v(bnF)[0]?.text)||"브랜드 키워드";
   const parts=[];
-  if(by("homelink")[0])parts.push(`<div class="pv-home">${p.opts.home==="logo"?'<b class="logo">logo</b>':""}${one("homelink")}<i>광고</i></div>`);
+  if(by("homelink")[0])parts.push(`<div class="pv-home">${p.opts.home==="logo"?'<b class="logo">logo</b>':""}<span>${(()=>{const f=by("homelink")[0],it=v(f)[0]||{},tx=String(it.text||"").trim();return (sl=>tx?`${esc(tx)} ${esc(sl)}`:`<span class="pv-empty">브랜드명 ${esc(sl)}</span>`)(p.opts.home==="text"?(String(it.slogan||"").trim()||"홈페이지"):"홈페이지")})()}</span><i>광고</i></div>`);
   if(by("news")[0]&&has("news"))parts.push(`<div class="pv-news"><b>${p.opts.news==="news"?(p.newsHead||"새소식"):(NEWS_LABEL[p.opts.news]||"새소식")}</b>${one("news")}<span class="chev">›</span></div>`);
   const imgF=by("image")[0];
   const img=imgF?`<div class="pv-mimg" style="${p.image?.url?`background-image:url('${esc(p.image.url)}')`:""}">${p.image?.url?"":"메인 이미지"}</div>`:"";
@@ -588,11 +590,13 @@ function renderPreview(){
   $("#pvBody").innerHTML=parts.join("");
 }
 
+function vs0(p,f){return (p.values[f.id]||[])[0]||{}}
 function xlsxRows(p){
   const t=templates.find(x=>x.id===p.templateId)||templates[0];
   const rows=[["영역","옵션","항목","순번","카피","글자수","최대","랜딩 URL"]];
   for(const f of vis(p,t)){
     if(f.type==="image")continue;
+    if(f.type==="homelink"){const it=vs0(p,f);rows.push(["홈링크",p.opts.home==="logo"?"로고형":"텍스트형","브랜드명","",String(it.text||"").trim(),"","",it.url||""]);if(p.opts.home==="text")rows.push(["홈링크","","슬로건","",String(it.slogan||"").trim()||"홈페이지","","",""]);continue}
     if(f.type==="news"&&p.opts.news==="news")rows.push(["브랜드소식","브랜드소식","말머리","",p.newsHead||"새소식","","",""]);
     const g=GROUPS.find(x=>x.k===f.group),og=g&&(g.k==="sub"?t.name:((g.opts||[]).find(o=>o[0]===p.opts[g.k])||[])[1]);
     const vs=vals(p,f);
@@ -621,6 +625,7 @@ async function exportXlsx(p){
 function exportText(p){
   const t=templates.find(x=>x.id===p.templateId)||templates[0];
   const lines=[`[브랜드검색 소재 기획안] ${p.title}`,`집행: ${p.start||"-"} ~ ${p.end||"-"}`,`템플릿: MO 라이트형 · ${GROUPS.filter(g=>g.opts).map(g=>g.name+" "+(g.opts.find(o=>o[0]===p.opts[g.k])||[])[1]).join(" / ")} / 서브 콘텐츠 ${t.name}`,"","■ 영역별 소재"];
+  if(p.opts.home==="text"){const h=(p.values.home||[])[0]||{};lines.push(`- 홈링크 · 슬로건: ${String(h.slogan||"").trim()||"홈페이지"}`)}
   if(p.opts.news==="news")lines.push(`- 브랜드소식 · 말머리: ${p.newsHead||"새소식"}`);
   for(const f of vis(p,t)){vals(p,f).forEach((it,i)=>{const g=GROUPS.find(x=>x.k===f.group);lines.push(`- ${g?g.name+" · ":""}${f.label}${f.count>1?" "+(i+1):""}: ${f.type==="image"?(p.image?.url?"이미지 업로드됨":"(이미지 미업로드)"):(it.text||"(미입력)")}${f.type!=="image"&&f.max?` (${len(it.text,t.countMode)}/${f.max})`:""}${it.url?` → ${it.url}`:""}`)})}
   return lines.join("\n");
@@ -632,7 +637,7 @@ function renderSettings(){
   const t0=draftTpl[0];
   const row=(f,ti,fi,common)=>{const g=GROUPS.find(x=>x.k===f.group);const a=`data-t="${ti}" data-f="${fi}" data-fid="${common?f.id:""}"`;
     return `<div class="srow"><span class="sg">${g?g.name:""}</span><span class="sl">${esc(f.label)}${COND_TXT[f.cond]?`<em class="scond">${COND_TXT[f.cond]}</em>`:""}</span>
-      ${f.maxBy?`<span class="sfix">개수별 ${Object.values(f.maxBy).join(" / ")}자 (가이드 고정)</span>`:f.plain||f.type==="image"?`<span class="sfix">${f.type==="image"?"이미지":"계정 입력"} · 글자수 없음</span>`:`<span class="smax"><input data-ff="max" ${a} type="number" min="1" max="999" value="${f.max}" aria-label="${esc(f.label)} 최대 글자수">자</span>`}
+      ${f.fixedMax?`<span class="sfix">${f.fixedMax}자 (가이드 고정)</span>`:f.maxBy?`<span class="sfix">개수별 ${Object.values(f.maxBy).join(" / ")}자 (가이드 고정)</span>`:f.plain||f.type==="image"?`<span class="sfix">${f.type==="image"?"이미지":"계정 입력"} · 글자수 없음</span>`:`<span class="smax"><input data-ff="max" ${a} type="number" min="1" max="999" value="${f.max}" aria-label="${esc(f.label)} 최대 글자수">자</span>`}
       <input data-ff="note" ${a} value="${esc(f.note||"")}" placeholder="비고" aria-label="${esc(f.label)} 비고"></div>`};
   const common=t0.fields.map((f,fi)=>[f,fi]).filter(([f])=>f.group!=="sub");
   $("#tplList").innerHTML=`
@@ -696,6 +701,7 @@ ed.addEventListener("drop",e=>{const d=e.target.closest("#imgDrop");if(d){e.prev
 ed.addEventListener("input",e=>{
   const el=e.target;
   if(el.dataset.p){cur[el.dataset.p]=el.value;scheduleSave();if(["start","end"].includes(el.dataset.p))refreshLight();return}
+  if(el.dataset.slogan){cur.values[el.dataset.slogan][0].slogan=el.value;scheduleSave();renderPreview();return}
   if(el.dataset.u){const it=cur.values[el.dataset.u][+el.dataset.i];let r=el.value.trim();const m=r.match(/^(https?:\/\/)/i);if(m){it.proto=m[1].toLowerCase();r=r.slice(m[1].length)}const pr=it.proto||(String(it.url||"").startsWith("http://")?"http://":"https://");it.proto=pr;it.url=r?pr+r:"";scheduleSave();refreshLight();return}
   if(el.dataset.v){cur.values[el.dataset.v][+el.dataset.i].text=el.value;scheduleSave();refreshLight();return}
   if(el.dataset.lp&&(el.dataset.lp==="name"||el.dataset.lp==="url")){cur.landings[+el.dataset.i][el.dataset.lp]=el.value;scheduleSave();refreshLight();return}
@@ -796,7 +802,7 @@ renderList();renderEditor();
   if(!db){db=makeLocalDb();storeMode="local";setSync("이 브라우저에만 저장 · 팀 공유 안 됨")}
   else setSync("팀 저장소 연결됨");
   db.doc("config/mo_light_v4").onSnapshot(s=>{
-    if(s.exists&&Array.isArray(s.data().templates)&&s.data().templates.length){templates=clone(s.data().templates).map(t=>({...t,fields:t.fields.map(f=>{const d=((DEFAULT_TEMPLATES.find(x=>x.id===t.id)||{}).fields||[]).find(x=>x.id===f.id)||[...BASE,...TAIL].find(x=>x.id===f.id);if(!d)return f;const o={...f};for(const k of ["label","type","count","cond","group","nolink","oneLink","countOpt","countMul","perTab","maxBy","plain"]){if(k in d)o[k]=d[k];else delete o[k]}if(f.count!==d.count)o.max=d.max;return o})}));ensureValues(cur);if(Date.now()-lastLocalEdit>2500)renderEditor()}
+    if(s.exists&&Array.isArray(s.data().templates)&&s.data().templates.length){templates=clone(s.data().templates).map(t=>({...t,fields:t.fields.map(f=>{const d=((DEFAULT_TEMPLATES.find(x=>x.id===t.id)||{}).fields||[]).find(x=>x.id===f.id)||[...BASE,...TAIL].find(x=>x.id===f.id);if(!d)return f;const o={...f};for(const k of ["label","type","count","cond","group","nolink","oneLink","countOpt","countMul","perTab","maxBy","plain","textLabel","fixedMax"]){if(k in d)o[k]=d[k];else delete o[k]}if(f.count!==d.count)o.max=d.max;return o})}));ensureValues(cur);if(Date.now()-lastLocalEdit>2500)renderEditor()}
   },()=>{});
   db.collection("plans").orderBy("updatedAt","desc").onSnapshot(snap=>{
     plans=snap.docs.map(d=>({...d.data(),_id:d.id}));
