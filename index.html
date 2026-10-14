@@ -166,6 +166,10 @@ header.top .sub{color:var(--muted);font-size:12.5px}
 .grp .seg{margin-bottom:6px}
 .tabblk{margin-top:14px;padding-top:10px;border-top:1px dashed var(--line)}
 .tabblk:first-of-type{border-top:0;padding-top:0}
+.tabhd{display:flex;align-items:center;gap:8px}
+.tabhd .tabsep{flex:1}
+.tabdel{padding:3px 8px;font-size:12px}
+.tabadd{margin-top:14px;margin-left:14px;border-style:dashed}
 .tabsep{display:flex;align-items:center;gap:6px;width:100%;border:0;background:transparent;padding:4px 0;cursor:pointer;font-size:12.5px;font-weight:700;color:var(--accent);text-align:left}
 .tabsep .car{width:12px;font-size:11px}
 .tabsep .tsum{font-weight:400;color:var(--muted);margin-left:4px}
@@ -238,6 +242,11 @@ header.top .sub{color:var(--muted);font-size:12.5px}
 .trow.over input,.trow.over textarea{border-color:var(--bad)}
 .lk2{display:grid;grid-template-columns:110px minmax(0,1fr);gap:6px}
 .lk2 input{font-family:var(--f-mono);font-size:12.5px}
+.logoup{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
+.logoprev{width:120px;height:56px;border:1px solid var(--line);border-radius:6px;background:#fff center/contain no-repeat}
+.lspec{margin:0;padding-left:18px;font-size:12.5px;line-height:1.7}
+.pv-home .pvlogo{height:22px;max-width:140px;object-fit:contain}
+.pv-home .logo.wide{width:auto;padding:0 8px;border-radius:4px;font-size:10px;height:22px}
 .fhint{font-size:12px;color:var(--muted)}
 .ferr{font-size:12px;color:#e5484d;line-height:1.3}
 .fi.withimg .ithumb{flex:none;margin-top:22px}
@@ -384,7 +393,7 @@ function sample(){
    kpi:"",compare:"",manual:{},image:null};
 }
 function blank(){
-  return {title:"새 기획전",start:"",end:"",templateId:templates[0].id,opts:{...DEF_OPTS},
+  return {title:"새 기획전",start:"",end:"",templateId:(templates.find(x=>x.dyn)||templates[0]).id,opts:{...DEF_OPTS},
    landings:[],values:{},kpi:"",compare:"",manual:{},image:null};
 }
 function ensureValues(p){
@@ -404,6 +413,7 @@ function analyze(p){
       const nm=f.perTab?`탭${Math.floor(i/3)+1} ${f.label} ${i%3+1}`:f.label+(f.count>1?" "+(i+1):"");
       if(f.type==="image"){if(!p.image?.url)noImg.push(nm);return}
       if(["thumbs","flick"].includes(f.type)&&!it.img?.url)noImg.push(nm);
+      if(f.type==="homelink"&&p.opts.home==="logo"){if(!p.logo?.url)noImg.push("로고 이미지");return}
       const n=len(it.text,t.countMode);
       if(!String(it.text||"").trim())emptyN.push(nm);
       else if(f.max&&n>f.max){over++;res.push(["bad",`${nm} ${n}/${f.max}자 초과`])}
@@ -420,7 +430,7 @@ function analyze(p){
   if(sup.length)res.push(["bad",`검수 리스크 표현: ${sup.join(", ")} → 객관적 근거 자료 필요`]);
   if(REPEAT.test(all))res.push(["bad","특수문자 반복 사용 (검수 반려 가능)"]);
   if(/%|할인|특가|세일|원\b/.test(all)&&!(p.start&&p.end))res.push(["bad","할인·가격 표현이 있는데 집행 기간이 비어 있음"]);
-  const its=VF.filter(f=>!f.nolink).flatMap(f=>f.oneLink?[{text:vals(p,f).map(x=>x.text||"").join(""),url:vals(p,f)[0]?.url}]:f.type==="image"?(p.image?.url?[{text:"img",url:vals(p,f)[0]?.url}]:[]):vals(p,f));
+  const its=VF.filter(f=>!f.nolink).flatMap(f=>f.type==="homelink"&&p.opts.home==="logo"?[{text:"logo",url:vals(p,f)[0]?.url}]:f.oneLink?[{text:vals(p,f).map(x=>x.text||"").join(""),url:vals(p,f)[0]?.url}]:f.type==="image"?(p.image?.url?[{text:"img",url:vals(p,f)[0]?.url}]:[]):vals(p,f));
   const noLanding=its.filter(i=>i.text&&!String(i.url||"").trim()).length;
   if(noLanding)res.push(["bad",`랜딩 미입력 영역 ${noLanding}곳`]);
   const badUrl=its.filter(i=>String(i.url||"").trim()&&!/^https?:\/\/[^/]+\.[^/]+/.test(i.url)).length;
@@ -488,16 +498,23 @@ function renderEditor(){
     }
     const multi=["lsdesc","legal"].includes(f.type);
     const newsHead=f.type==="news"&&p.opts.news==="news"?`<div class="fl">말머리</div><div class="finfo">입력하고자 하는 소식과 가장 적합한 말머리를 선택해주세요.</div><div class="radios" role="radiogroup" aria-label="말머리">${NEWS_HEADS.map(h=>`<label><input type="radio" name="newsHead" data-nh="${h}"${(p.newsHead||"새소식")===h?" checked":""}> ${h}</label>`).join("")}</div>`:"";
+    if(f.type==="homelink"&&p.opts.home==="logo"){const it=vals(p,f)[0]||{};
+      return `<div class="copy-field"><div class="hd"><b>로고 이미지</b></div><div class="fi"><div class="fbody">
+        <div class="logoup">${p.logo?.url?`<div class="logoprev" style="background-image:url('${esc(p.logo.url)}')"></div>`:""}
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-start"><label class="btn" for="logoUp" style="cursor:pointer">${p.logo?.url?"이미지 변경":"이미지 업로드"}</label>${p.logo?.url?`<button class="btn ghost" type="button" id="logoDel">제거</button>`:""}<input type="file" id="logoUp" accept="image/png" hidden></div>
+          <ul class="lspec"><li>너비 : 80 ~ 960px</li><li>높이 : 88 ~ 160px</li><li>파일 확장자 : png</li><li>파일 크기 : 최대 10MB</li></ul></div>
+        ${p.logo?.url?(p.logo.w?`<div class="fhint">업로드됨 · ${p.logo.w}×${p.logo.h}px</div>`:""):`<div class="ferr">로고 이미지를 업로드하세요.</div>`}
+        ${urlRow(f,0,it)}</div></div></div>`}
     const items=vals(p,f).map((it,i)=>{
       const wi=IMGT.includes(f.type);
       const tabHd=f.perTab&&i%3===0&&tabF?(()=>{const k=i/3,tv=vals(p,tabF)[k]||{text:""};const cl=closedTabs.has(k),filled=vals(p,f).slice(k*3,k*3+3).filter(x=>String(x.text||"").trim()).length;
-        return `<div class="tabblk"><button type="button" class="tabsep" data-tabtog="${k}" aria-expanded="${!cl}"><span class="car">${cl?"▸":"▾"}</span>탭 메뉴 ${k+1}${cl?`<span class="tsum">${tv.text?esc(tv.text)+" · ":""}섬네일 ${filled}/3 입력</span>`:""}</button>${cl?"":`<div class="fi" style="margin-top:4px"><div class="fbody">${textRow(tabF,k,tv,false,`탭 메뉴 ${k+1}`)}</div></div>`}</div>`})():"";
+        return `<div class="tabblk"><div class="tabhd"><button type="button" class="tabsep" data-tabtog="${k}" aria-expanded="${!cl}"><span class="car">${cl?"▸":"▾"}</span>탭 메뉴 ${k+1}${cl?`<span class="tsum">${tv.text?esc(tv.text)+" · ":""}섬네일 ${filled}/3 입력</span>`:""}</button>${k===2?`<button type="button" class="btn ghost danger tabdel" data-tabdel="1">탭 메뉴 3 삭제</button>`:""}</div>${cl?"":`<div class="fi" style="margin-top:4px"><div class="fbody">${textRow(tabF,k,tv,false,`탭 메뉴 ${k+1}`)}</div></div>`}</div>`})():"";
       if(f.perTab&&closedTabs.has(Math.floor(i/3)))return tabHd;
       const thumb=wi?`<label class="ithumb${it.img?.url?" has":""}" title="이미지 업로드" style="${it.img?.url?`background-image:url('${esc(it.img.url)}')`:""}">${it.img?.url?"":"+ 이미지"}<input type="file" data-img="${f.id}" data-i="${i}" accept="image/png,image/jpeg" hidden></label>`:"";
       const sub=f.oneLink?`${i+1})`:f.perTab?`섬네일 ${i%3+1}`:f.count>1?`${f.label} ${i+1}`:"";
       let link=f.nolink||(f.oneLink&&i<f.count-1)?"":(f.oneLink?urlRow(f,0,vals(p,f)[0]):urlRow(f,i,it));
       if(f.type==="homelink"&&p.opts.home==="text")link=`<div class="fl">슬로건</div><input data-slogan="${f.id}" value="${esc(it.slogan||"")}" placeholder="홈페이지" aria-label="슬로건"><div class="fhint">슬로건 미입력 시 '홈페이지'로 입력됩니다.</div>`+link;
-      return `${tabHd}<div class="fi${wi?" withimg":""}${f.perTab?" intab":""}">${thumb}<div class="fbody">${i===0?newsHead:""}${sub?`<div class="fsub">${esc(sub)}</div>`:""}${textRow(f,i,it,multi,sub||f.label)}${link}</div></div>`}).join("");
+      return `${tabHd}<div class="fi${wi?" withimg":""}${f.perTab?" intab":""}">${thumb}<div class="fbody">${i===0?newsHead:""}${sub?`<div class="fsub">${esc(sub)}</div>`:""}${textRow(f,i,it,multi,sub||f.label)}${link}</div></div>`}).join("")+(f.perTab&&String(p.opts.tabN)==="2"?`<button type="button" class="btn tabadd" data-tabadd="1">+ 탭 메뉴 3 추가</button>`:"");
     return `<div class="copy-field"><div class="hd"><b>${esc(f.label)}</b><span class="spec">최대 ${f.max}${t.countMode==="byte"?"byte":"자"}${f.count>1?` × ${f.count}개`:""}${f.note?" · "+esc(f.note):""}</span></div>${items}</div>`;
   };
   const fieldsHtml=GROUPS.map(g=>{
@@ -506,7 +523,7 @@ function renderEditor(){
     const cntSeg=(k,arr,lab)=>`<div class="subopt"><span>${lab}</span><div class="seg sm" role="radiogroup" aria-label="${lab}">${arr.map(([n,l])=>`<button type="button" role="radio" aria-checked="${String(p.opts[k])===n}" data-opt="${k}:${n}">${l}</button>`).join("")}</div></div>`;
     const subExtra=g.k!=="sub"?"":(isDyn?`<div class="subopt"><span>구성</span><div class="seg sm" role="radiogroup" aria-label="다이나믹 섬네일 구성">${dynT.map(x=>`<button type="button" role="radio" aria-checked="${x.id===t.id}" data-tplsel="${x.id}">${esc(x.name)}</button>`).join("")}</div></div>`:"")
       +(t.fields.some(f=>f.countOpt==="btnN")?cntSeg("btnN",[["1","1개 · 19자"],["2","2개 · 9자"],["3","3개 · 7자"],["4","4개 · 9자"]],"버튼 개수"):"")
-      +(t.fields.some(f=>f.countOpt==="tabN")?cntSeg("tabN",[["2","2개 (섬네일 6)"],["3","3개 (섬네일 9)"]],"탭 개수").replace(/<\/div><\/div>$/,`</div><button type="button" class="btn ghost" data-tabtogall="1" style="padding:4px 8px;font-size:12px">${closedTabs.size>=+p.opts.tabN?"모두 펼치기":"모두 접기"}</button></div>`):"")
+      +(t.fields.some(f=>f.countOpt==="tabN")?`<div class="subopt"><span>탭 메뉴 ${p.opts.tabN}개 (최소 2 · 최대 3)</span><button type="button" class="btn ghost" data-tabtogall="1" style="padding:4px 8px;font-size:12px">${closedTabs.size>=+p.opts.tabN?"모두 펼치기":"모두 접기"}</button></div>`:"")
       +(t.fields.some(f=>f.countOpt==="flickN")?cntSeg("flickN",[["4","4개"],["5","5개"]],"섬네일 개수"):"");
     const fs=VF.filter(f=>f.group===g.k);
     return `<div class="grp"><div class="grp-hd"><b>${g.name}</b><span class="chip ${g.req?"s-review":"s-draft"}">${g.req?"필수":"선택"}</span></div>
@@ -571,7 +588,7 @@ function renderPreview(){
   const hF=by("homelink")[0],hq=hF?String(v(hF)[0]?.text||"").trim():"";
   $("#pvQuery").textContent=hq||(bnF&&v(bnF)[0]?.text)||"브랜드 키워드";
   const parts=[];
-  if(by("homelink")[0])parts.push(`<div class="pv-home">${p.opts.home==="logo"?'<b class="logo">logo</b>':""}<span>${(()=>{const f=by("homelink")[0],it=v(f)[0]||{},tx=String(it.text||"").trim();return (sl=>tx?`${esc(tx)} ${esc(sl)}`:`<span class="pv-empty">브랜드명 ${esc(sl)}</span>`)(p.opts.home==="text"?(String(it.slogan||"").trim()||"홈페이지"):"홈페이지")})()}</span><i>광고</i></div>`);
+  if(by("homelink")[0])parts.push(`<div class="pv-home">${p.opts.home==="logo"?(p.logo?.url?`<img class="pvlogo" src="${esc(p.logo.url)}" alt="로고">`:'<b class="logo wide">로고 이미지</b>'):""}<span>${p.opts.home==="logo"?"":(()=>{const f=by("homelink")[0],it=v(f)[0]||{},tx=String(it.text||"").trim();return (sl=>tx?`${esc(tx)} ${esc(sl)}`:`<span class="pv-empty">브랜드명 ${esc(sl)}</span>`)(String(it.slogan||"").trim()||"홈페이지")})()}</span><i>광고</i></div>`);
   if(by("news")[0]&&has("news"))parts.push(`<div class="pv-news"><b>${p.opts.news==="news"?(p.newsHead||"새소식"):(NEWS_LABEL[p.opts.news]||"새소식")}</b>${one("news")}<span class="chev">›</span></div>`);
   const imgF=by("image")[0];
   const img=imgF?`<div class="pv-mimg" style="${p.image?.url?`background-image:url('${esc(p.image.url)}')`:""}">${p.image?.url?"":"메인 이미지"}</div>`:"";
@@ -596,7 +613,7 @@ function xlsxRows(p){
   const rows=[["영역","옵션","항목","순번","카피","글자수","최대","랜딩 URL"]];
   for(const f of vis(p,t)){
     if(f.type==="image")continue;
-    if(f.type==="homelink"){const it=vs0(p,f);rows.push(["홈링크",p.opts.home==="logo"?"로고형":"텍스트형","브랜드명","",String(it.text||"").trim(),"","",it.url||""]);if(p.opts.home==="text")rows.push(["홈링크","","슬로건","",String(it.slogan||"").trim()||"홈페이지","","",""]);continue}
+    if(f.type==="homelink"){const it=vs0(p,f);if(p.opts.home==="logo"){rows.push(["홈링크","로고형","로고 이미지","",p.logo?.url?`업로드됨${p.logo.w?` (${p.logo.w}×${p.logo.h}px)`:""}`:"미업로드","","",it.url||""]);continue}rows.push(["홈링크","텍스트형","브랜드명","",String(it.text||"").trim(),"","",it.url||""]);if(p.opts.home==="text")rows.push(["홈링크","","슬로건","",String(it.slogan||"").trim()||"홈페이지","","",""]);continue}
     if(f.type==="news"&&p.opts.news==="news")rows.push(["브랜드소식","브랜드소식","말머리","",p.newsHead||"새소식","","",""]);
     const g=GROUPS.find(x=>x.k===f.group),og=g&&(g.k==="sub"?t.name:((g.opts||[]).find(o=>o[0]===p.opts[g.k])||[])[1]);
     const vs=vals(p,f);
@@ -684,7 +701,15 @@ function refreshLight(){ // update counters/preview without rebuilding focused i
     if(id){let el=a.id?document.getElementById(a.id):a.dataset.v?document.querySelector(`[data-v="${a.dataset.v}"][data-i="${a.dataset.i}"]`):document.querySelector(`[data-u="${a.dataset.u}"][data-i="${a.dataset.i}"]`);if(el){el.focus();try{if(pos!=null)el.setSelectionRange(pos,pos)}catch(e){}}}
   },900);
 }
-function shrink(file,max=800){return new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>{const im=new Image();im.onload=()=>{const k=Math.min(1,max/Math.max(im.width,im.height));const c=document.createElement("canvas");c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext("2d").drawImage(im,0,0,c.width,c.height);res(c.toDataURL("image/jpeg",.85))};im.onerror=rej;im.src=fr.result};fr.onerror=rej;fr.readAsDataURL(file)})}
+function shrink(file,max=800){return new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>{const im=new Image();im.onload=()=>{const k=Math.min(1,max/Math.max(im.width,im.height));const c=document.createElement("canvas");c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext("2d").drawImage(im,0,0,c.width,c.height);res(c.toDataURL(file.type==="image/png"&&max<=480?"image/png":"image/jpeg",.85))};im.onerror=rej;im.src=fr.result};fr.onerror=rej;fr.readAsDataURL(file)})}
+function imgDims(file){return new Promise((res,rej)=>{const u=URL.createObjectURL(file),im=new Image();im.onload=()=>{res({w:im.naturalWidth,h:im.naturalHeight});URL.revokeObjectURL(u)};im.onerror=rej;im.src=u})}
+async function uploadLogo(file){
+  if(file.type!=="image/png"){toast("로고는 png 파일만 올릴 수 있어요");return}
+  if(file.size>10*1024*1024){toast("파일 크기는 최대 10MB예요");return}
+  let d;try{d=await imgDims(file)}catch(e){toast("이미지를 읽지 못했습니다");return}
+  if(d.w<80||d.w>960||d.h<88||d.h>160){toast(`규격이 맞지 않아요: ${d.w}×${d.h}px (너비 80~960, 높이 88~160px)`);return}
+  await uploadImage(file,img=>{cur.logo={...img,w:d.w,h:d.h}},480);
+}
 async function uploadImage(file,setFn,max=480){
   setFn=setFn||(img=>{cur.image=img});
   if(!/^image\/(png|jpe?g)$/.test(file.type)){toast("jpg 또는 png 이미지만 올릴 수 있어요");return}
@@ -715,11 +740,14 @@ ed.addEventListener("change",async e=>{
   if(el.dataset.lp==="track"){cur.landings[+el.dataset.i].track=el.value;scheduleSave();renderEditor();return}
   if(el.dataset.m){cur.manual=cur.manual||{};cur.manual[el.dataset.m]=el.checked;scheduleSave();renderEditor();return}
   if(el.id==="imgUp"&&el.files[0]){await uploadImage(el.files[0])}
+  if(el.id==="logoUp"&&el.files[0]){await uploadLogo(el.files[0]);return}
   if(el.dataset.img&&el.files[0]){const k=el.dataset.img,i=+el.dataset.i;await uploadImage(el.files[0],img=>{cur.values[k][i].img=img},240)}
 });
 ed.addEventListener("click",async e=>{
   const b=e.target.closest("button");if(!b)return;
   if(b.dataset.tabtog!=null){const k=+b.dataset.tabtog;closedTabs.has(k)?closedTabs.delete(k):closedTabs.add(k);renderEditor();return}
+  if(b.dataset.tabdel){cur.opts.tabN="2";if(cur.values.ext_tab&&cur.values.ext_tab[2])cur.values.ext_tab[2]={text:"",url:""};if(cur.values.ext)for(let i=6;i<9;i++)if(cur.values.ext[i])cur.values.ext[i]={text:"",url:""};closedTabs.delete(2);scheduleSave();renderEditor();toast("탭 메뉴 3을 삭제했습니다");return}
+  if(b.dataset.tabadd){cur.opts.tabN="3";closedTabs.delete(2);scheduleSave();renderEditor();return}
   if(b.dataset.tabtogall){const n=+cur.opts.tabN;if(closedTabs.size>=n)closedTabs.clear();else for(let k=0;k<n;k++)closedTabs.add(k);renderEditor();return}
   if(b.dataset.opt){const[k,v]=b.dataset.opt.split(":");cur.opts[k]=v;scheduleSave();renderEditor();return}
   if(b.dataset.tplsel){cur.templateId=b.dataset.tplsel;ensureValues(cur);scheduleSave();renderEditor();return}
@@ -743,6 +771,7 @@ ed.addEventListener("click",async e=>{
   else if(b.id==="btnDelYes"){await deletePlan(currentId);return}
   else if(b.id==="btnDelYesOld"){const id=currentId;clearTimeout(saveTimer);try{await saving;await db.collection("plans").doc(id).delete();currentId=null;cur=ensureValues(blank());cur._new=true;isSample=true;confirmDel=false;renderEditor();toast("삭제했습니다")}catch(err){toast("삭제하지 못했습니다. 권한을 확인하세요")}}
   else if(b.id==="btnDup"){const c=clone(cur);c.title=c.title+" (복제)";c.manual={};await createPlan(c)}
+  else if(b.id==="logoDel"){cur.logo=null;scheduleSave();renderEditor()}
   else if(b.id==="imgDel"){cur.image=null;scheduleSave();renderEditor()}
 });
 $("#planList").addEventListener("click",async e=>{
