@@ -203,6 +203,17 @@ header.top .sub{color:var(--muted);font-size:12.5px}
 .pv-note{font-size:11.5px;color:var(--muted);text-align:center}
 
 /* settings */
+.settings .tpl-hd b{font-size:13.5px}.settings .tpl-hd .hint{font-size:12px;color:var(--muted)}
+.sset{display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:12.5px}
+.sset select{border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:5px 7px}
+.srow{display:grid;grid-template-columns:110px minmax(0,1.2fr) 150px minmax(0,1.4fr);gap:8px;align-items:center;padding:5px 0;border-top:1px solid var(--sunk);font-size:12.5px}
+.srow.shead{font-size:11px;color:var(--muted);border-top:0}
+.srow .sg{color:var(--muted)}.srow .sl{font-weight:600}
+.srow .smax{display:flex;align-items:center;gap:4px}.srow .smax input{width:70px}
+.srow input{border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:5px 7px;min-width:0;font-size:12.5px}
+.srow .scond{display:block;font-style:normal;font-weight:400;font-size:11px;color:var(--accent)}
+.srow .sfix{font-size:11.5px;color:var(--muted)}
+@media (max-width:760px){.srow{grid-template-columns:1fr 1fr}.srow.shead{display:none}}
 .settings .tpl{border:1px solid var(--line);border-radius:6px;padding:12px;margin-bottom:12px}
 .settings .tpl-hd{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
 .settings .tpl-hd input{flex:1;min-width:160px;border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:6px 9px;font-weight:600}
@@ -229,6 +240,10 @@ header.top .sub{color:var(--muted);font-size:12.5px}
 .lk2 input{font-family:var(--f-mono);font-size:12.5px}
 .ferr{font-size:12px;color:#e5484d;line-height:1.3}
 .fi.withimg .ithumb{flex:none;margin-top:22px}
+.finfo{background:#e8f4fd;color:#2c3e50;border-radius:4px;padding:9px 12px;font-size:12.5px}
+.radios{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;padding:2px 0 4px}
+.radios label{display:inline-flex;align-items:center;gap:5px;cursor:pointer}
+.radios input{width:auto;accent-color:#03c75a}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:8px 14px;border-radius:6px;font-size:13px;z-index:9}
 .confirm{display:inline-flex;gap:6px;align-items:center;font-size:12.5px}
 pre.export{white-space:pre-wrap;background:var(--sunk);border-radius:6px;padding:12px;font-family:var(--f-mono);font-size:12px;max-height:260px;overflow:auto;margin:0}
@@ -251,7 +266,7 @@ pre.export{white-space:pre-wrap;background:var(--sunk);border-radius:6px;padding
     <h2>템플릿 설정 <span class="hint">공통 영역(홈링크·메인 콘텐츠 등) 글자수는 한 곳만 고치면 모든 구성에 같이 반영돼요. 팀 공용 설정이고, 기본값이니 네이버 최신 소재 가이드 기준으로 맞춰 두세요.</span></h2>
     <div id="tplList"></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn" id="btnAddTpl" type="button">+ 템플릿 추가</button>
+
       <div class="spacer"></div>
       <button class="btn ghost" id="btnCloseSettings" type="button">닫기</button>
       <button class="btn primary" id="btnSaveTpl" type="button">템플릿 저장</button>
@@ -295,6 +310,8 @@ const GROUPS=[
  {k:"legal",name:"법적고지문",req:false,opts:[["none","사용 안 함"],["general","일반고지문"],["loan","대부업/대부중개업 고지문"]]}];
 const DEF_OPTS={home:"logo",news:"none",main:"basic",sns:"none",legal:"none",btnN:"4",tabN:"3",flickN:"5"};
 const NEWS_LABEL={news:"새소식",live:"쇼핑라이브",clip:"숏클립"};
+const COND_TXT={"news!=none":"브랜드소식 사용 시","main=basic":"메인 콘텐츠 베이직 선택 시","main=listing":"메인 콘텐츠 리스팅 선택 시","sns!=none":"SNS소식 사용 시","legal!=none":"법적고지문 사용 시"};
+const NEWS_HEADS=["새소식","핫딜","할인","이벤트","기획전"];
 const BASE=[
   {id:"home",group:"home",label:"홈링크 문구",type:"homelink",max:20,count:1,note:""},
   {id:"news",group:"news",label:"브랜드소식 문구",type:"news",max:30,count:1,note:"",cond:"news!=none"},
@@ -469,6 +486,7 @@ function renderEditor(){
       </div></div></div>`;
     }
     const multi=["lsdesc","legal"].includes(f.type);
+    const newsHead=f.type==="news"&&p.opts.news==="news"?`<div class="fl">말머리</div><div class="finfo">입력하고자 하는 소식과 가장 적합한 말머리를 선택해주세요.</div><div class="radios" role="radiogroup" aria-label="말머리">${NEWS_HEADS.map(h=>`<label><input type="radio" name="newsHead" data-nh="${h}"${(p.newsHead||"새소식")===h?" checked":""}> ${h}</label>`).join("")}</div>`:"";
     const items=vals(p,f).map((it,i)=>{
       const wi=IMGT.includes(f.type);
       const tabHd=f.perTab&&i%3===0&&tabF?(()=>{const k=i/3,tv=vals(p,tabF)[k]||{text:""};const cl=closedTabs.has(k),filled=vals(p,f).slice(k*3,k*3+3).filter(x=>String(x.text||"").trim()).length;
@@ -477,7 +495,7 @@ function renderEditor(){
       const thumb=wi?`<label class="ithumb${it.img?.url?" has":""}" title="이미지 업로드" style="${it.img?.url?`background-image:url('${esc(it.img.url)}')`:""}">${it.img?.url?"":"+ 이미지"}<input type="file" data-img="${f.id}" data-i="${i}" accept="image/png,image/jpeg" hidden></label>`:"";
       const sub=f.oneLink?`${i+1})`:f.perTab?`섬네일 ${i%3+1}`:f.count>1?`${f.label} ${i+1}`:"";
       const link=f.nolink||(f.oneLink&&i<f.count-1)?"":(f.oneLink?urlRow(f,0,vals(p,f)[0]):urlRow(f,i,it));
-      return `${tabHd}<div class="fi${wi?" withimg":""}${f.perTab?" intab":""}">${thumb}<div class="fbody">${sub?`<div class="fsub">${esc(sub)}</div>`:""}${textRow(f,i,it,multi,sub||f.label)}${link}</div></div>`}).join("");
+      return `${tabHd}<div class="fi${wi?" withimg":""}${f.perTab?" intab":""}">${thumb}<div class="fbody">${i===0?newsHead:""}${sub?`<div class="fsub">${esc(sub)}</div>`:""}${textRow(f,i,it,multi,sub||f.label)}${link}</div></div>`}).join("");
     return `<div class="copy-field"><div class="hd"><b>${esc(f.label)}</b><span class="spec">최대 ${f.max}${t.countMode==="byte"?"byte":"자"}${f.count>1?` × ${f.count}개`:""}${f.note?" · "+esc(f.note):""}</span></div>${items}</div>`;
   };
   const fieldsHtml=GROUPS.map(g=>{
@@ -552,7 +570,7 @@ function renderPreview(){
   $("#pvQuery").textContent=hq||(bnF&&v(bnF)[0]?.text)||"브랜드 키워드";
   const parts=[];
   if(by("homelink")[0])parts.push(`<div class="pv-home">${p.opts.home==="logo"?'<b class="logo">logo</b>':""}${one("homelink")}<i>광고</i></div>`);
-  if(by("news")[0]&&has("news"))parts.push(`<div class="pv-news"><b>${NEWS_LABEL[p.opts.news]||"새소식"}</b>${one("news")}<span class="chev">›</span></div>`);
+  if(by("news")[0]&&has("news"))parts.push(`<div class="pv-news"><b>${p.opts.news==="news"?(p.newsHead||"새소식"):(NEWS_LABEL[p.opts.news]||"새소식")}</b>${one("news")}<span class="chev">›</span></div>`);
   const imgF=by("image")[0];
   const img=imgF?`<div class="pv-mimg" style="${p.image?.url?`background-image:url('${esc(p.image.url)}')`:""}">${p.image?.url?"":"메인 이미지"}</div>`:"";
   if(p.opts.main!=="listing")parts.push(`<div class="pv-main">${img}<div class="pv-mtext"><div class="pv-mbrand">${one("mtbrand")}</div><div class="pv-mtitle">${one("mttitle")}</div><div class="pv-mdesc">${(()=>{const f=by("mtdesc")[0];return f?v(f).map(it=>cell(f,it)).join("<br>"):""})()}</div></div></div>`);
@@ -575,6 +593,7 @@ function xlsxRows(p){
   const rows=[["영역","옵션","항목","순번","카피","글자수","최대","랜딩 URL"]];
   for(const f of vis(p,t)){
     if(f.type==="image")continue;
+    if(f.type==="news"&&p.opts.news==="news")rows.push(["브랜드소식","브랜드소식","말머리","",p.newsHead||"새소식","","",""]);
     const g=GROUPS.find(x=>x.k===f.group),og=g&&(g.k==="sub"?t.name:((g.opts||[]).find(o=>o[0]===p.opts[g.k])||[])[1]);
     const vs=vals(p,f);
     vs.forEach((it,i)=>{
@@ -602,6 +621,7 @@ async function exportXlsx(p){
 function exportText(p){
   const t=templates.find(x=>x.id===p.templateId)||templates[0];
   const lines=[`[브랜드검색 소재 기획안] ${p.title}`,`집행: ${p.start||"-"} ~ ${p.end||"-"}`,`템플릿: MO 라이트형 · ${GROUPS.filter(g=>g.opts).map(g=>g.name+" "+(g.opts.find(o=>o[0]===p.opts[g.k])||[])[1]).join(" / ")} / 서브 콘텐츠 ${t.name}`,"","■ 영역별 소재"];
+  if(p.opts.news==="news")lines.push(`- 브랜드소식 · 말머리: ${p.newsHead||"새소식"}`);
   for(const f of vis(p,t)){vals(p,f).forEach((it,i)=>{const g=GROUPS.find(x=>x.k===f.group);lines.push(`- ${g?g.name+" · ":""}${f.label}${f.count>1?" "+(i+1):""}: ${f.type==="image"?(p.image?.url?"이미지 업로드됨":"(이미지 미업로드)"):(it.text||"(미입력)")}${f.type!=="image"&&f.max?` (${len(it.text,t.countMode)}/${f.max})`:""}${it.url?` → ${it.url}`:""}`)})}
   return lines.join("\n");
 }
@@ -609,19 +629,19 @@ function exportText(p){
 /* ---------- settings ---------- */
 let draftTpl=null;
 function renderSettings(){
-  $("#tplList").innerHTML=draftTpl.map((t,ti)=>`<div class="tpl">
-    <div class="tpl-hd"><input data-tn="${ti}" value="${esc(t.name)}" aria-label="템플릿 이름">
-      <select data-tm="${ti}" aria-label="글자수 계산">${opt([["char","글자 단위"],["byte","바이트(한글 2)"]],t.countMode)}</select>
-      <button class="btn ghost danger" type="button" data-tdel="${ti}"${draftTpl.length<2?" disabled":""}>템플릿 삭제</button></div>
-    <div class="frow fhead"><span>영역명</span><span>유형</span><span>최대</span><span>개수</span><span>비고(비율 등)</span><span></span></div>
-    ${t.fields.map((f,fi)=>`<div class="frow">
-      <input data-ff="label" data-t="${ti}" data-f="${fi}" data-fid="${f.group==="sub"?"":f.id}" value="${esc(f.label)}" aria-label="영역명">
-      <select data-ff="type" data-t="${ti}" data-f="${fi}" data-fid="${f.group==="sub"?"":f.id}" aria-label="유형">${opt(TYPES,f.type)}</select>
-      <input data-ff="max" data-t="${ti}" data-f="${fi}" data-fid="${f.group==="sub"?"":f.id}" type="number" min="0" value="${f.max}" aria-label="최대 글자수">
-      <input data-ff="count" data-t="${ti}" data-f="${fi}" data-fid="${f.group==="sub"?"":f.id}" type="number" min="1" max="8" value="${f.count}" aria-label="개수">
-      <input data-ff="note" data-t="${ti}" data-f="${fi}" data-fid="${f.group==="sub"?"":f.id}" value="${esc(f.note||"")}" aria-label="비고">
-      <button class="x" type="button" data-fdel="${ti}-${fi}" aria-label="영역 삭제">×</button></div>`).join("")}
-    <button class="btn ghost" type="button" data-fadd="${ti}" style="margin-top:8px">+ 영역 추가</button></div>`).join("");
+  const t0=draftTpl[0];
+  const row=(f,ti,fi,common)=>{const g=GROUPS.find(x=>x.k===f.group);const a=`data-t="${ti}" data-f="${fi}" data-fid="${common?f.id:""}"`;
+    return `<div class="srow"><span class="sg">${g?g.name:""}</span><span class="sl">${esc(f.label)}${COND_TXT[f.cond]?`<em class="scond">${COND_TXT[f.cond]}</em>`:""}</span>
+      ${f.maxBy?`<span class="sfix">개수별 ${Object.values(f.maxBy).join(" / ")}자 (가이드 고정)</span>`:f.plain||f.type==="image"?`<span class="sfix">${f.type==="image"?"이미지":"계정 입력"} · 글자수 없음</span>`:`<span class="smax"><input data-ff="max" ${a} type="number" min="1" max="999" value="${f.max}" aria-label="${esc(f.label)} 최대 글자수">자</span>`}
+      <input data-ff="note" ${a} value="${esc(f.note||"")}" placeholder="비고" aria-label="${esc(f.label)} 비고"></div>`};
+  const common=t0.fields.map((f,fi)=>[f,fi]).filter(([f])=>f.group!=="sub");
+  $("#tplList").innerHTML=`
+    <div class="sset"><span>글자수 계산</span><select data-cmall="1" aria-label="글자수 계산">${opt([["char","글자 단위"],["byte","바이트(한글 2)"]],t0.countMode)}</select></div>
+    <div class="tpl"><div class="tpl-hd"><b>공통 영역</b><span class="hint">모든 서브 콘텐츠 구성에 같이 적용돼요</span></div>
+      <div class="srow shead"><span>영역</span><span>항목</span><span>최대 글자수</span><span>비고</span></div>
+      ${common.map(([f,fi])=>row(f,0,fi,true)).join("")}</div>
+    ${draftTpl.map((t,ti)=>`<div class="tpl"><div class="tpl-hd"><b>서브 콘텐츠 · ${t.dyn?"다이나믹 섬네일 ":""}${esc(t.name)}</b></div>
+      ${t.fields.map((f,fi)=>[f,fi]).filter(([f])=>f.group==="sub").map(([f,fi])=>row(f,ti,fi,false)).join("")}</div>`).join("")}`;
 }
 
 /* ---------- persistence ---------- */
@@ -641,7 +661,7 @@ async function createPlan(p){
   if(!db){toast("저장소에 연결되지 않아 저장할 수 없습니다");return}
   const body=stripMeta(p);body.createdAt=body.updatedAt=Date.now();
   try{const ref=db.collection("plans").doc();await ref.set(body);currentId=ref.id;cur=ensureValues({...body,_id:ref.id});isSample=false;showExport=false;confirmDel=false;renderEditor();renderList();toast("저장했습니다")}
-  catch(e){toast(e?.code==="quota_exceeded"?"저장 공간이 가득 찼습니다. 오래된 기획안을 정리해 주세요":"저장하지 못했습니다. 편집 권한을 확인하세요")}
+  catch(e){toast(e?.code==="quota_exceeded"?"저장 공간이 가득 찼습니다. 오래된 기획안을 정리해 주세요":`저장하지 못했습니다 (${e?.code||e?.message||"알 수 없는 오류"})`)}
 }
 function select(id){
   const p=plans.find(x=>x._id===id);if(!p)return;
@@ -682,6 +702,7 @@ ed.addEventListener("input",e=>{
 });
 ed.addEventListener("change",async e=>{
   const el=e.target;
+    if(el.dataset.nh){cur.newsHead=el.dataset.nh;scheduleSave();renderEditor();return}
     if(el.dataset.proto){const it=cur.values[el.dataset.proto][+el.dataset.i];const r=String(it.url||"").replace(/^https?:\/\//,"");it.proto=el.value;it.url=r?el.value+r:"";scheduleSave();renderEditor();return}
   if(el.dataset.l){cur.values[el.dataset.l][+el.dataset.i].landing=el.value;scheduleSave();renderEditor();return}
   if(el.dataset.lp==="mall"){const l=cur.landings[+el.dataset.i];l.mall=el.value;l.track=(MALLS.find(m=>m[0]===el.value)||[])[2]||"no";scheduleSave();renderEditor();return}
@@ -706,7 +727,7 @@ ed.addEventListener("click",async e=>{
     if(isSample){b.disabled=true;await createPlan(cur);if(nb)toast(`저장했습니다 (오류 ${nb}건은 확인이 필요해요)`);return}
     clearTimeout(saveTimer);b.disabled=true;setSync("저장 중…");
     const id=currentId;cur.updatedAt=Date.now();const body=stripMeta(cur);
-    saving=saving.then(()=>db.collection("plans").doc(id).set(body)).then(()=>{setSync("저장됨 "+new Date().toTimeString().slice(0,5));toast(nb?`저장했습니다 (오류 ${nb}건은 확인이 필요해요)`:"저장했습니다");renderEditor();renderList()}).catch(e=>{setSync("저장 실패");b.disabled=false;toast("저장하지 못했습니다. 편집 권한을 확인하세요")});
+    saving=saving.then(()=>db.collection("plans").doc(id).set(body)).then(()=>{setSync("저장됨 "+new Date().toTimeString().slice(0,5));toast(nb?`저장했습니다 (오류 ${nb}건은 확인이 필요해요)`:"저장했습니다");renderEditor();renderList()}).catch(e=>{setSync("저장 실패");b.disabled=false;toast(`저장하지 못했습니다 (${e?.code||e?.message||"알 수 없는 오류"})`)});
   }
   else if(b.id==="btnShowExport"){showExport=!showExport;renderEditor()}
   else if(b.id==="btnXlsx"){await exportXlsx(cur);return}
@@ -728,7 +749,7 @@ $("#btnNew").addEventListener("click",()=>{clearTimeout(saveTimer);currentId=nul
 
 $("#btnSettings").addEventListener("click",()=>{draftTpl=clone(templates);renderSettings();$("#settings").hidden=false;$("#settings").scrollIntoView({behavior:"smooth",block:"start"})});
 $("#btnCloseSettings").addEventListener("click",()=>{$("#settings").hidden=true});
-$("#btnAddTpl").addEventListener("click",()=>{draftTpl.push({id:"tpl-"+uid(),name:"새 템플릿",countMode:"char",fields:[{id:uid(),label:"헤드라인",type:"headline",max:20,count:1,note:""}]});renderSettings()});
+false&&document.body.addEventListener("click",()=>{draftTpl.push({id:"tpl-"+uid(),name:"새 템플릿",countMode:"char",fields:[{id:uid(),label:"헤드라인",type:"headline",max:20,count:1,note:""}]});renderSettings()});
 const st=$("#tplList");
 st.addEventListener("input",e=>{const el=e.target;
   if(el.dataset.tn!=null)draftTpl[+el.dataset.tn].name=el.value;
@@ -736,6 +757,7 @@ st.addEventListener("input",e=>{const el=e.target;
     if(el.dataset.fid){for(const t of draftTpl)for(const g of t.fields)if(g.id===el.dataset.fid&&g!==f)g[el.dataset.ff]=f[el.dataset.ff];
       document.querySelectorAll(`[data-ff="${el.dataset.ff}"][data-fid="${el.dataset.fid}"]`).forEach(x=>{if(x!==el)x.value=el.value})}}});
 st.addEventListener("change",e=>{const el=e.target;
+  if(el.dataset.cmall){draftTpl.forEach(t=>t.countMode=el.value);return}
   if(el.dataset.tm!=null)draftTpl[+el.dataset.tm].countMode=el.value;
   else if(el.dataset.ff==="type")draftTpl[+el.dataset.t].fields[+el.dataset.f].type=el.value});
 st.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
@@ -745,10 +767,24 @@ st.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
 $("#btnSaveTpl").addEventListener("click",async()=>{
   templates=clone(draftTpl);ensureValues(cur);renderEditor();
   if(!db){toast("이 화면에만 적용했습니다 (저장소 미연결)");return}
-  try{await db.doc("config/mo_light_v4").set({templates,updatedAt:Date.now()});toast("팀 템플릿을 저장했습니다");$("#settings").hidden=true}
-  catch(e){toast("템플릿을 저장하지 못했습니다. 편집 권한을 확인하세요")}
+  try{await db.doc("config/mo_light_v4").set({templates,updatedAt:Date.now()});toast(storeMode==="local"?"템플릿을 저장했습니다 (이 브라우저)":"팀 템플릿을 저장했습니다");$("#settings").hidden=true}
+  catch(e){toast(`템플릿을 저장하지 못했습니다 (${e?.code||e?.message||"알 수 없는 오류"}) · 이 화면에는 적용됐어요`)}
 });
 
+/* ---------- local fallback store (this browser only) ---------- */
+let storeMode="team";
+function makeLocalDb(){
+  const KEY="bsp_store_v1";let mem={};
+  try{mem=JSON.parse(localStorage.getItem(KEY)||"{}")||{}}catch(e){mem={}}
+  const persist=()=>{try{localStorage.setItem(KEY,JSON.stringify(mem))}catch(e){throw {code:"quota_exceeded"}}};
+  const subs=[];const fire=()=>subs.forEach(f=>f());
+  const docRef=path=>({id:path.split("/").pop(),path,
+    set:async d=>{mem[path]=JSON.parse(JSON.stringify(d));persist();fire()},
+    delete:async()=>{delete mem[path];persist();fire()},
+    onSnapshot:cb=>{const f=()=>cb({exists:path in mem,data:()=>mem[path]});subs.push(f);setTimeout(f,0);return()=>{}}});
+  return {doc:docRef,collection:c=>({doc:id=>docRef(c+"/"+(id||Math.random().toString(36).slice(2,12))),
+    orderBy:(k,dir)=>({onSnapshot:cb=>{const f=()=>{const docs=Object.keys(mem).filter(x=>x.startsWith(c+"/")).map(x=>({id:x.slice(c.length+1),data:()=>mem[x]})).sort((a,b)=>(b.data()[k]||0)-(a.data()[k]||0));cb({docs,metadata:{}})};subs.push(f);setTimeout(f,0);return()=>{}}})})};
+}
 /* ---------- boot ---------- */
 cur=ensureValues(blank());cur._new=true;
 renderList();renderEditor();
@@ -757,8 +793,8 @@ renderList();renderEditor();
   try{assets=await window.claude?.use?.("assets")}catch(e){assets=null}
   try{downloads=await window.claude?.use?.("downloads")}catch(e){downloads=null}
   if(downloads)renderEditor();
-  if(!db){setSync("오프라인 · 예시 모드");renderList();return}
-  setSync("동기화됨");
+  if(!db){db=makeLocalDb();storeMode="local";setSync("이 브라우저에만 저장 · 팀 공유 안 됨")}
+  else setSync("팀 저장소 연결됨");
   db.doc("config/mo_light_v4").onSnapshot(s=>{
     if(s.exists&&Array.isArray(s.data().templates)&&s.data().templates.length){templates=clone(s.data().templates).map(t=>({...t,fields:t.fields.map(f=>{const d=((DEFAULT_TEMPLATES.find(x=>x.id===t.id)||{}).fields||[]).find(x=>x.id===f.id)||[...BASE,...TAIL].find(x=>x.id===f.id);if(!d)return f;const o={...f};for(const k of ["label","type","count","cond","group","nolink","oneLink","countOpt","countMul","perTab","maxBy","plain"]){if(k in d)o[k]=d[k];else delete o[k]}if(f.count!==d.count)o.max=d.max;return o})}));ensureValues(cur);if(Date.now()-lastLocalEdit>2500)renderEditor()}
   },()=>{});
